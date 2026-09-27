@@ -7,14 +7,28 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
+import { useT, type DictKey } from "../../i18n";
 import { colors, font, springs } from "../../theme";
-import { Backdrop, Beat, CountUp, Kicker, Rule, Words, displayText } from "../shared";
+import type { SceneProps } from "../registry";
+import {
+  Backdrop,
+  Beat,
+  CountUp,
+  Kicker,
+  Rule,
+  Words,
+  displayText,
+} from "../shared";
 
 /* ========================================================================== *
- *  Scene 1 - Title
+ *  Title, framing, horizon and closing rules.
+ *  Every user-visible string comes from the dictionary via `lang`.
  * ========================================================================== */
 
-export const TitleScene: React.FC = () => {
+/* ---------------------------------------------------------------- title -- */
+
+export const TitleScene: React.FC<SceneProps> = ({ lang }) => {
+  const t = useT(lang);
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
 
@@ -37,9 +51,7 @@ export const TitleScene: React.FC = () => {
       <Backdrop heat={0.75} />
 
       {/* Concentric rings that turn almost imperceptibly. */}
-      <AbsoluteFill
-        style={{ alignItems: "center", justifyContent: "center" }}
-      >
+      <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
         <div
           style={{
             width: 1180,
@@ -76,7 +88,7 @@ export const TitleScene: React.FC = () => {
           textAlign: "center",
         }}
       >
-        <Kicker delay={6}>A lecture on order, leverage and attention</Kicker>
+        <Kicker delay={6}>{t("title.kicker")}</Kicker>
 
         <h1
           style={{
@@ -87,7 +99,8 @@ export const TitleScene: React.FC = () => {
             textShadow: "0 0 90px rgba(255,149,0,0.35)",
           }}
         >
-          <Words text="The Priority of Life" delay={16} stagger={5} />
+          {/* Scales down for longer translations so Vietnamese never overflows. */}
+          <Words text={t("title.heading")} delay={16} stagger={5} />
         </h1>
 
         <Rule delay={44} width={520} thickness={2} />
@@ -102,20 +115,14 @@ export const TitleScene: React.FC = () => {
             maxWidth: 900,
           }}
         >
-          <Words
-            text="Not a list of goals. A *container*, and a decision about what goes in first."
-            delay={54}
-            stagger={2}
-          />
+          <Words text={t("title.sub")} delay={54} stagger={2} />
         </p>
       </AbsoluteFill>
     </AbsoluteFill>
   );
 };
 
-/* ========================================================================== *
- *  Scene 2 - Framing: the arithmetic nobody escapes
- * ========================================================================== */
+/* -------------------------------------------------------------- framing -- */
 
 const Stat: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div
@@ -134,102 +141,103 @@ const Stat: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   </div>
 );
 
-export const FramingScene: React.FC = () => (
-  <AbsoluteFill>
-    <Backdrop heat={0.5} origin="82% 18%" />
+export const FramingScene: React.FC<SceneProps> = ({ lang }) => {
+  const t = useT(lang);
 
-    <Series>
-      {/* Beat 1 */}
-      <Series.Sequence durationInFrames={78}>
-        <Beat gap={22}>
-          <Kicker>The inventory</Kicker>
-          <h2 style={displayText(104)}>
-            <Words text="You have *24 hours*." delay={8} stagger={5} />
-          </h2>
-        </Beat>
-      </Series.Sequence>
+  const stats: DictKey[] = [
+    "framing.stat.sleep",
+    "framing.stat.work",
+    "framing.stat.overhead",
+    "framing.stat.left",
+  ];
 
-      {/* Beat 2 */}
-      <Series.Sequence durationInFrames={84}>
-        <Beat gap={20}>
-          <h2 style={displayText(84)}>
-            <Words text="Not 24 hours for everything." delay={4} stagger={4} />
-          </h2>
-          <p
-            style={{
-              fontFamily: font.body,
-              fontSize: 34,
-              color: colors.textDim,
-              margin: 0,
-            }}
-          >
-            <Words
-              text="24 hours. In total. For everything."
-              delay={24}
-              stagger={4}
-            />
-          </p>
-        </Beat>
-      </Series.Sequence>
+  return (
+    <AbsoluteFill>
+      <Backdrop heat={0.5} origin="82% 18%" />
 
-      {/* Beat 3 */}
-      <Series.Sequence durationInFrames={96}>
-        <Beat gap={34}>
-          <h2 style={displayText(76)}>
-            <Words
-              text="Sleep and work will ask for *two thirds*."
-              delay={4}
-              stagger={4}
-            />
-          </h2>
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "center" }}>
-            <Stat>8h sleep</Stat>
-            <Stat>8h work</Stat>
-            <Stat>2h overhead</Stat>
-            <Stat>6h left over</Stat>
-          </div>
-        </Beat>
-      </Series.Sequence>
+      <Series>
+        {/* Beat 1 */}
+        <Series.Sequence durationInFrames={78}>
+          <Beat gap={22}>
+            <Kicker>{t("framing.kicker1")}</Kicker>
+            <h2 style={displayText(104)}>
+              <Words text={t("framing.beat1")} delay={8} stagger={5} />
+            </h2>
+          </Beat>
+        </Series.Sequence>
 
-      {/* Beat 4 */}
-      <Series.Sequence durationInFrames={102}>
-        <Beat gap={26}>
-          <Kicker delay={2}>Which collapses the whole problem</Kicker>
-          <h2 style={displayText(80)}>
-            <Words
-              text="The only question is: *what comes first?*"
-              delay={14}
-              stagger={5}
-            />
-          </h2>
-        </Beat>
-      </Series.Sequence>
-    </Series>
-  </AbsoluteFill>
-);
+        {/* Beat 2 */}
+        <Series.Sequence durationInFrames={84}>
+          <Beat gap={20}>
+            <h2 style={displayText(84)}>
+              <Words text={t("framing.beat2a")} delay={4} stagger={4} />
+            </h2>
+            <p
+              style={{
+                fontFamily: font.body,
+                fontSize: 34,
+                color: colors.textDim,
+                margin: 0,
+              }}
+            >
+              <Words text={t("framing.beat2b")} delay={24} stagger={4} />
+            </p>
+          </Beat>
+        </Series.Sequence>
 
-/* ========================================================================== *
- *  Scene 3 - Horizon: the same question at every scale
- * ========================================================================== */
+        {/* Beat 3 */}
+        <Series.Sequence durationInFrames={96}>
+          <Beat gap={34}>
+            <h2 style={displayText(76)}>
+              <Words text={t("framing.beat3")} delay={4} stagger={4} />
+            </h2>
+            <div
+              style={{
+                display: "flex",
+                gap: 16,
+                flexWrap: "wrap",
+                justifyContent: "center",
+              }}
+            >
+              {stats.map((key) => (
+                <Stat key={key}>{t(key)}</Stat>
+              ))}
+            </div>
+          </Beat>
+        </Series.Sequence>
 
-type Period = {
-  label: string;
-  hours: number;
-  unit: string;
+        {/* Beat 4 */}
+        <Series.Sequence durationInFrames={102}>
+          <Beat gap={26}>
+            <Kicker delay={2}>{t("framing.kicker2")}</Kicker>
+            <h2 style={displayText(80)}>
+              <Words text={t("framing.beat4")} delay={14} stagger={5} />
+            </h2>
+          </Beat>
+        </Series.Sequence>
+      </Series>
+    </AbsoluteFill>
+  );
 };
 
+/* -------------------------------------------------------------- horizon -- */
+
+type Period = { labelKey: DictKey; hours: number };
+
 const PERIODS: Period[] = [
-  { label: "One day", hours: 24, unit: "hours" },
-  { label: "One week", hours: 168, unit: "hours" },
-  { label: "One year", hours: 8760, unit: "hours" },
-  { label: "Ten years", hours: 87600, unit: "hours" },
+  { labelKey: "horizon.p1", hours: 24 },
+  { labelKey: "horizon.p2", hours: 168 },
+  { labelKey: "horizon.p3", hours: 8760 },
+  { labelKey: "horizon.p4", hours: 87600 },
 ];
 
 const PeriodRow: React.FC<{
   period: Period;
+  label: string;
+  unit: string;
   index: number;
   appearAt: number;
-}> = ({ period, index, appearAt }) => {
+}> = ({ period, label, unit, index, appearAt }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
@@ -265,7 +273,7 @@ const PeriodRow: React.FC<{
           color: index === 3 ? colors.amber200 : colors.textFaint,
         }}
       >
-        {period.label}
+        {label}
       </div>
 
       <div
@@ -313,15 +321,14 @@ const PeriodRow: React.FC<{
         }}
       >
         <CountUp to={period.hours} delay={appearAt + 10} durationInFrames={45} />{" "}
-        <span style={{ color: colors.textFaint, fontSize: 16 }}>
-          {period.unit}
-        </span>
+        <span style={{ color: colors.textFaint, fontSize: 16 }}>{unit}</span>
       </div>
     </div>
   );
 };
 
-export const HorizonScene: React.FC = () => {
+export const HorizonScene: React.FC<SceneProps> = ({ lang }) => {
+  const t = useT(lang);
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
@@ -353,15 +360,20 @@ export const HorizonScene: React.FC = () => {
             gap: 14,
           }}
         >
-          <Kicker>The same question, at every scale</Kicker>
-          <h2 style={displayText(62)}>
-            Your life is this day, repeated.
-          </h2>
+          <Kicker>{t("horizon.kicker")}</Kicker>
+          <h2 style={displayText(62)}>{t("horizon.heading")}</h2>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {PERIODS.map((p, i) => (
-            <PeriodRow key={p.label} period={p} index={i} appearAt={40 + i * 48} />
+            <PeriodRow
+              key={p.labelKey}
+              period={p}
+              label={t(p.labelKey)}
+              unit={t("horizon.unit")}
+              index={i}
+              appearAt={40 + i * 48}
+            />
           ))}
         </div>
 
@@ -400,10 +412,9 @@ export const HorizonScene: React.FC = () => {
               color: colors.textDim,
             }}
           >
-            unclaimed hours in ten years — if you only ever protect{" "}
-            <b style={{ color: colors.bone }}>8 hours a day</b>. That is three
-            and a third years of full days. The largest single resource you will
-            ever own.
+            {/* Vietnamese puts the qualifier before the noun, so the whole
+                sentence is one translatable unit rather than a concatenation. */}
+            {t("horizon.callout")}
           </div>
         </div>
       </AbsoluteFill>
@@ -411,32 +422,20 @@ export const HorizonScene: React.FC = () => {
   );
 };
 
-/* ========================================================================== *
- *  Scene 4 - Closing rules
- * ========================================================================== */
+/* ---------------------------------------------------------------- rules -- */
 
-const RULES: { n: string; text: string; note: string }[] = [
-  {
-    n: "01",
-    text: "Name the rocks first.",
-    note: "Before the week starts, decide what cannot be moved. Write it down.",
-  },
-  {
-    n: "02",
-    text: "Pay for small things last.",
-    note: "Fine material is cheap only when it fills the gaps big things leave.",
-  },
-  {
-    n: "03",
-    text: "Claim the time, or lose it.",
-    note: "Whatever you leave unassigned, the feed will take. Quietly, and by default.",
-  },
-];
+const RULES = [
+  { n: "01", titleKey: "rules.r1.title", noteKey: "rules.r1.note" },
+  { n: "02", titleKey: "rules.r2.title", noteKey: "rules.r2.note" },
+  { n: "03", titleKey: "rules.r3.title", noteKey: "rules.r3.note" },
+] as const;
 
-const RuleRow: React.FC<{ rule: (typeof RULES)[number]; appearAt: number }> = ({
-  rule,
-  appearAt,
-}) => {
+const RuleRow: React.FC<{
+  n: string;
+  title: string;
+  note: string;
+  appearAt: number;
+}> = ({ n, title, note, appearAt }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const p = spring({
@@ -466,10 +465,10 @@ const RuleRow: React.FC<{ rule: (typeof RULES)[number]; appearAt: number }> = ({
           color: colors.amber500,
         }}
       >
-        {rule.n}
+        {n}
       </div>
       <div>
-        <div style={{ ...displayText(46), marginBottom: 6 }}>{rule.text}</div>
+        <div style={{ ...displayText(46), marginBottom: 6 }}>{title}</div>
         <div
           style={{
             fontFamily: font.body,
@@ -478,14 +477,15 @@ const RuleRow: React.FC<{ rule: (typeof RULES)[number]; appearAt: number }> = ({
             lineHeight: 1.5,
           }}
         >
-          {rule.note}
+          {note}
         </div>
       </div>
     </div>
   );
 };
 
-export const RulesScene: React.FC = () => {
+export const RulesScene: React.FC<SceneProps> = ({ lang }) => {
+  const t = useT(lang);
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
@@ -514,11 +514,17 @@ export const RulesScene: React.FC = () => {
             marginBottom: 16,
           }}
         >
-          <Kicker>Three rules that survive contact with a real week</Kicker>
+          <Kicker>{t("rules.kicker")}</Kicker>
         </div>
 
         {RULES.map((r, i) => (
-          <RuleRow key={r.n} rule={r} appearAt={30 + i * 72} />
+          <RuleRow
+            key={r.n}
+            n={r.n}
+            title={t(r.titleKey)}
+            note={t(r.noteKey)}
+            appearAt={30 + i * 72}
+          />
         ))}
 
         <div
@@ -541,7 +547,7 @@ export const RulesScene: React.FC = () => {
               color: colors.amber200,
             }}
           >
-            Priority is not a feeling. It is an order.
+            {t("rules.punch")}
           </div>
         </div>
       </AbsoluteFill>

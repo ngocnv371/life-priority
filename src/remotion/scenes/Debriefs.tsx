@@ -6,7 +6,9 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
+import { Rich, useT, type DictKey } from "../../i18n";
 import { blockColors, colors, font, springs } from "../../theme";
+import type { SceneProps } from "../registry";
 import { Backdrop, Kicker, Rule, Words, displayText } from "../shared";
 
 /* ========================================================================== *
@@ -19,14 +21,15 @@ import { Backdrop, Kicker, Rule, Words, displayText } from "../shared";
  *  24-hour day debrief
  * -------------------------------------------------------------------------- */
 
-type DaySegment = { hours: number; color: string; label?: string };
+type DaySegment = { hours: number; color: string; labelKey?: DictKey };
 
 const DayBar: React.FC<{
   segments: DaySegment[];
   appearAt: number;
   caption: string;
   accent?: boolean;
-}> = ({ segments, appearAt, caption, accent = false }) => {
+  t: (key: DictKey) => string;
+}> = ({ segments, appearAt, caption, accent = false, t }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const total = segments.reduce((a, s) => a + s.hours, 0);
@@ -37,7 +40,6 @@ const DayBar: React.FC<{
     config: springs.smooth,
   });
 
-  // Each segment grows in its own slot, left to right.
   let cursor = 0;
 
   return (
@@ -56,17 +58,14 @@ const DayBar: React.FC<{
           height: 62,
           borderRadius: 12,
           overflow: "hidden",
-          border: `1px solid ${
-            accent ? colors.lineStrong : colors.line
-          }`,
+          border: `1px solid ${accent ? colors.lineStrong : colors.line}`,
           background: "rgba(0,0,0,0.4)",
           boxShadow: accent ? "0 0 50px -12px rgba(255,149,0,0.6)" : "none",
         }}
       >
         {segments.map((s, i) => {
-          const at = appearAt + 6 + i * 3;
           const grow = spring({
-            frame: Math.max(0, frame - at),
+            frame: Math.max(0, frame - (appearAt + 6 + i * 3)),
             fps,
             config: springs.snappy,
           });
@@ -86,9 +85,9 @@ const DayBar: React.FC<{
                 justifyContent: "center",
                 overflow: "hidden",
               }}
-              title={`${left}h - ${left + s.hours}h`}
+              title={`${left}h`}
             >
-              {s.hours >= 3 && s.label ? (
+              {s.hours >= 3 && s.labelKey ? (
                 <span
                   style={{
                     fontFamily: font.mono,
@@ -98,7 +97,7 @@ const DayBar: React.FC<{
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {s.label}
+                  {t(s.labelKey)}
                 </span>
               ) : null}
             </div>
@@ -120,7 +119,8 @@ const DayBar: React.FC<{
   );
 };
 
-export const DayDebriefScene: React.FC = () => {
+export const DayDebriefScene: React.FC<SceneProps> = ({ lang }) => {
+  const t = useT(lang);
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
 
@@ -157,11 +157,7 @@ export const DayDebriefScene: React.FC = () => {
         }}
       >
         <h2 style={displayText(72)}>
-          <Words
-            text="Your day is not a list. It is a *container*."
-            delay={4}
-            stagger={5}
-          />
+          <Words text={t("daydebrief.heading")} delay={4} stagger={5} />
         </h2>
 
         <div
@@ -176,28 +172,70 @@ export const DayDebriefScene: React.FC = () => {
           }}
         >
           <DayBar
+            t={t}
             appearAt={100}
-            caption="What most days actually are"
+            caption={t("daydebrief.capActual")}
             segments={[
-              { hours: 8, color: blockColors.sleep, label: "sleep" },
-              { hours: 8, color: blockColors.work, label: "work" },
-              { hours: 2, color: blockColors.chores, label: "overhead" },
-              { hours: 6, color: blockColors.feed, label: "the feed" },
+              {
+                hours: 8,
+                color: blockColors.sleep,
+                labelKey: "daydebrief.seg.sleep",
+              },
+              {
+                hours: 8,
+                color: blockColors.work,
+                labelKey: "daydebrief.seg.work",
+              },
+              {
+                hours: 2,
+                color: blockColors.chores,
+                labelKey: "daydebrief.seg.overhead",
+              },
+              {
+                hours: 6,
+                color: blockColors.feed,
+                labelKey: "daydebrief.seg.feed",
+              },
             ]}
           />
 
           <DayBar
+            t={t}
             appearAt={200}
             accent
-            caption="What the same day is when you allocate it first"
+            caption={t("daydebrief.capAllocated")}
             segments={[
-              { hours: 8, color: blockColors.sleep, label: "sleep" },
-              { hours: 8, color: blockColors.work, label: "work" },
-              { hours: 2, color: blockColors.chores, label: "overhead" },
-              { hours: 1, color: blockColors.body, label: "move" },
-              { hours: 2, color: blockColors.people, label: "people" },
-              { hours: 2, color: blockColors.craft, label: "craft" },
-              { hours: 1, color: blockColors.stillness, label: "still" },
+              {
+                hours: 8,
+                color: blockColors.sleep,
+                labelKey: "daydebrief.seg.sleep",
+              },
+              {
+                hours: 8,
+                color: blockColors.work,
+                labelKey: "daydebrief.seg.work",
+              },
+              {
+                hours: 2,
+                color: blockColors.chores,
+                labelKey: "daydebrief.seg.overhead",
+              },
+              { hours: 1, color: blockColors.body, labelKey: "daydebrief.seg.move" },
+              {
+                hours: 2,
+                color: blockColors.people,
+                labelKey: "daydebrief.seg.people",
+              },
+              {
+                hours: 2,
+                color: blockColors.craft,
+                labelKey: "daydebrief.seg.craft",
+              },
+              {
+                hours: 1,
+                color: blockColors.stillness,
+                labelKey: "daydebrief.seg.still",
+              },
             ]}
           />
         </div>
@@ -212,7 +250,7 @@ export const DayDebriefScene: React.FC = () => {
             gap: 20,
           }}
         >
-          <Kicker delay={118}>The mechanic</Kicker>
+          <Kicker delay={118}>{t("daydebrief.kicker")}</Kicker>
           <div
             style={{
               fontFamily: font.body,
@@ -220,9 +258,11 @@ export const DayDebriefScene: React.FC = () => {
               color: colors.textDim,
             }}
           >
-            Nothing in the first bar was{" "}
-            <b style={{ color: colors.bone }}>decided</b>. It was{" "}
-            <b style={{ color: colors.amber300 }}>defaulted</b>.
+            <Rich
+              text={t("daydebrief.punch")}
+              accentStyle={{ color: colors.amber300, fontStyle: "normal" }}
+              boldStyle={{ color: colors.bone, fontWeight: 700 }}
+            />
           </div>
         </div>
       </AbsoluteFill>
@@ -251,10 +291,10 @@ const MiniJar: React.FC<{
   layers: JarLayer[];
   appearAt: number;
   title: string;
-  filled: number;
-  footnote: React.ReactNode;
+  filledLabel: string;
+  footnote: string;
   good: boolean;
-}> = ({ layers, appearAt, title, filled, footnote, good }) => {
+}> = ({ layers, appearAt, title, filledLabel, footnote, good }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
@@ -264,8 +304,13 @@ const MiniJar: React.FC<{
     config: springs.smooth,
   });
 
+  // The perfect run fills the jar to exactly 100; the bad run stalls at 95.
+  const filled = layers.reduce((sum, l) => sum + l.cost, 0);
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14, width: 300 }}>
+    <div
+      style={{ display: "flex", flexDirection: "column", gap: 14, width: 300 }}
+    >
       <div
         style={{
           fontFamily: font.mono,
@@ -334,14 +379,8 @@ const MiniJar: React.FC<{
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <div
-          style={{
-            fontFamily: font.mono,
-            fontSize: 15,
-            color: colors.textDim,
-          }}
-        >
-          jar filled{" "}
+        <div style={{ fontFamily: font.mono, fontSize: 15, color: colors.textDim }}>
+          {filledLabel}{" "}
           <b style={{ color: good ? colors.good : colors.bad }}>{filled}/100</b>
         </div>
         <div
@@ -352,14 +391,26 @@ const MiniJar: React.FC<{
             color: colors.textDim,
           }}
         >
-          {footnote}
+          <Rich
+            text={footnote}
+            accentStyle={{
+              color: good ? colors.good : colors.bad,
+              fontStyle: "normal",
+            }}
+          />
         </div>
       </div>
     </div>
   );
 };
 
-const pad = (n: number, at: number, kind: JarLayer["kind"], cost: number, label?: string) =>
+const pad = (
+  n: number,
+  at: number,
+  kind: JarLayer["kind"],
+  cost: number,
+  label?: string,
+) =>
   Array.from({ length: n }, (_, i) => ({
     kind,
     cost,
@@ -367,7 +418,8 @@ const pad = (n: number, at: number, kind: JarLayer["kind"], cost: number, label?
     label: i === 0 ? label : undefined,
   }));
 
-export const JarDebriefScene: React.FC = () => {
+export const JarDebriefScene: React.FC<SceneProps> = ({ lang }) => {
+  const t = useT(lang);
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
 
@@ -403,11 +455,7 @@ export const JarDebriefScene: React.FC = () => {
         }}
       >
         <h2 style={{ ...displayText(66), textAlign: "center" }}>
-          <Words
-            text="Same jar. Same 3 rocks, 5 pebbles, 10 handfuls of sand."
-            delay={2}
-            stagger={4}
-          />
+          <Words text={t("jardebrief.heading")} delay={2} stagger={4} />
         </h2>
 
         <div
@@ -420,38 +468,28 @@ export const JarDebriefScene: React.FC = () => {
         >
           <MiniJar
             appearAt={96}
-            title="Sand poured first"
+            title={t("jardebrief.sand")}
             good={false}
-            filled={95}
-            footnote={
-              <>
-                45 units of fine material settled in first. Two rocks got in.
-                The third <b style={{ color: colors.bad }}>never fit</b>.
-              </>
-            }
+            filledLabel={t("jardebrief.filled")}
+            footnote={t("jardebrief.footnoteSand")}
             layers={[
               ...pad(10, 110, "sand", 2),
               ...pad(5, 174, "pebble", 5),
-              { kind: "rock", cost: 25, at: 206, label: "rock" },
-              { kind: "rock", cost: 25, at: 214, label: "rock" },
+              { kind: "rock", cost: 25, at: 206, label: t("jardebrief.layerRock") },
+              { kind: "rock", cost: 25, at: 214, label: t("jardebrief.layerRock") },
             ]}
           />
 
           <MiniJar
             appearAt={96}
-            title="Rocks placed first"
+            title={t("jardebrief.rocks")}
             good
-            filled={100}
-            footnote={
-              <>
-                Rocks leave voids. Pebbles and sand settle into them at{" "}
-                <b style={{ color: colors.good }}>half price</b>. Everything fits.
-              </>
-            }
+            filledLabel={t("jardebrief.filled")}
+            footnote={t("jardebrief.footnoteRocks")}
             layers={[
-              { kind: "rock", cost: 25, at: 110, label: "rock" },
-              { kind: "rock", cost: 25, at: 118, label: "rock" },
-              { kind: "rock", cost: 25, at: 126, label: "rock" },
+              { kind: "rock", cost: 25, at: 110, label: t("jardebrief.layerRock") },
+              { kind: "rock", cost: 25, at: 118, label: t("jardebrief.layerRock") },
+              { kind: "rock", cost: 25, at: 126, label: t("jardebrief.layerRock") },
               ...pad(5, 136, "pebble", 3),
               ...pad(10, 172, "sand", 1),
             ]}
@@ -478,7 +516,7 @@ export const JarDebriefScene: React.FC = () => {
               color: colors.amber200,
             }}
           >
-            You never lose the big things to big things.
+            {t("jardebrief.punch")}
           </div>
         </div>
       </AbsoluteFill>

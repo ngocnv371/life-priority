@@ -1,4 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  I18nProvider,
+  LANGS,
+  LANG_LABELS,
+  LANG_NAMES,
+  useI18n,
+  type DictKey,
+} from "./i18n";
 import { DayBox } from "./interactive/DayBox";
 import { Jar } from "./interactive/Jar";
 import { VideoSection } from "./sections/VideoSection";
@@ -8,21 +16,21 @@ import { VideoSection } from "./sections/VideoSection";
  *
  *  Eight sections, alternating between a rendered Remotion scene and a live
  *  interactive puzzle. Every scene in `SCENES` also renders standalone through
- *  `npm run studio`.
+ *  `npm run studio`, in either language.
  * ========================================================================== */
 
 type Section =
   | {
       kind: "video";
       id: string;
-      short: string;
+      shortKey: DictKey;
       sceneId: string;
-      caption: React.ReactNode;
+      captionKey: DictKey;
     }
   | {
       kind: "custom";
       id: string;
-      short: string;
+      shortKey: DictKey;
       render: () => React.ReactNode;
     };
 
@@ -30,92 +38,54 @@ const SECTIONS: Section[] = [
   {
     kind: "video",
     id: "title",
-    short: "Title",
+    shortKey: "sec.title",
     sceneId: "Title",
-    caption: (
-      <>
-        Everything that follows rests on one uncomfortable piece of arithmetic:{" "}
-        <strong>24 hours, in total, for everything.</strong>
-      </>
-    ),
+    captionKey: "cap.title",
   },
   {
     kind: "video",
     id: "framing",
-    short: "Framing",
+    shortKey: "sec.framing",
     sceneId: "Framing",
-    caption: (
-      <>
-        Two thirds of the day is already spoken for. The lecture is about the
-        remaining third — and about the order you spend it in.
-      </>
-    ),
+    captionKey: "cap.framing",
   },
-  {
-    kind: "custom",
-    id: "day",
-    short: "The day",
-    render: () => <DayBox />,
-  },
+  { kind: "custom", id: "day", shortKey: "sec.day", render: () => <DayBox /> },
   {
     kind: "video",
     id: "day-debrief",
-    short: "Debrief",
+    shortKey: "sec.dayDebrief",
     sceneId: "DayDebrief",
-    caption: (
-      <>
-        Nothing in the first bar was <strong>decided</strong>. It was{" "}
-        <strong>defaulted</strong>. That is the difference worth taking home.
-      </>
-    ),
+    captionKey: "cap.dayDebrief",
   },
-  {
-    kind: "custom",
-    id: "jar",
-    short: "The jar",
-    render: () => <Jar />,
-  },
+  { kind: "custom", id: "jar", shortKey: "sec.jar", render: () => <Jar /> },
   {
     kind: "video",
     id: "jar-debrief",
-    short: "Debrief",
+    shortKey: "sec.jarDebrief",
     sceneId: "JarDebrief",
-    caption: (
-      <>
-        Same jar, same items, same total volume. Only the order changed — and
-        the order is what decided who lost.
-      </>
-    ),
+    captionKey: "cap.jarDebrief",
   },
   {
     kind: "video",
     id: "horizon",
-    short: "Horizon",
+    shortKey: "sec.horizon",
     sceneId: "Horizon",
-    caption: (
-      <>
-        The day repeats. Over a decade, the unclaimed hours stop looking like a
-        rounding error and start looking like a whole second life.
-      </>
-    ),
+    captionKey: "cap.horizon",
   },
   {
     kind: "video",
     id: "rules",
-    short: "Rules",
+    shortKey: "sec.rules",
     sceneId: "Rules",
-    caption: (
-      <>
-        Three rules short enough to remember on a Monday morning — and specific
-        enough to act on before the week starts.
-      </>
-    ),
+    captionKey: "cap.rules",
   },
 ];
 
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
 
-export const App: React.FC = () => {
+const Deck: React.FC = () => {
+  const { lang, setLang, t } = useI18n();
+
   const [index, setIndex] = useState(0);
   const [autoAdvance, setAutoAdvance] = useState(true);
 
@@ -176,38 +146,59 @@ export const App: React.FC = () => {
     return (
       <VideoSection
         sceneId={section.sceneId}
-        caption={section.caption}
+        lang={lang}
+        caption={t(section.captionKey)}
         autoAdvance={autoAdvance}
         onFinished={() => go(1)}
       />
     );
     // `<main key={section.id}>` remounts on every section change, so revisiting
-    // a scene always replays it from frame 0.
-  }, [section, autoAdvance, go]);
+    // a scene always replays it from frame 0. Changing language does not
+    // remount, so a running scene keeps its position.
+  }, [section, autoAdvance, go, lang, t]);
 
   return (
     <div className="app">
       <header className="topbar">
         <div className="brand">
           <span className="brand-mark" />
-          <span>The Priority of Life</span>
+          <span>{t("brand")}</span>
         </div>
 
-        <nav className="progress-rail" aria-label="Sections">
+        <nav className="progress-rail" aria-label={t("brand")}>
           {SECTIONS.map((s, i) => (
             <button
               key={s.id}
               className="progress-seg"
               data-state={i < index ? "done" : i === index ? "active" : "todo"}
-              aria-label={`Go to ${s.short}`}
+              aria-label={t(s.shortKey)}
               aria-current={i === index ? "step" : undefined}
-              title={s.short}
+              title={t(s.shortKey)}
               onClick={() => setIndex(i)}
             >
               <i />
             </button>
           ))}
         </nav>
+
+        <div
+          className="lang-switch"
+          role="group"
+          aria-label={t("hud.langLabel")}
+        >
+          {LANGS.map((l) => (
+            <button
+              key={l}
+              className="lang-option"
+              data-active={l === lang}
+              aria-pressed={l === lang}
+              title={LANG_NAMES[l]}
+              onClick={() => setLang(l)}
+            >
+              {LANG_LABELS[l]}
+            </button>
+          ))}
+        </div>
 
         <span className="section-counter">
           {String(index + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}
@@ -220,12 +211,8 @@ export const App: React.FC = () => {
 
       <footer className="hub">
         <div className="hub-group">
-          <button
-            className="btn"
-            onClick={() => go(-1)}
-            disabled={index === 0}
-          >
-            ← Back
+          <button className="btn" onClick={() => go(-1)} disabled={index === 0}>
+            ← {t("hud.back")}
           </button>
           <button
             className="btn"
@@ -233,13 +220,14 @@ export const App: React.FC = () => {
             onClick={() => go(1)}
             disabled={index === total - 1}
           >
-            Next →
+            {t("hud.next")} →
           </button>
         </div>
 
         <div className="hub-group">
           <span className="hud-hint">
-            <kbd>←</kbd> <kbd>→</kbd> navigate · <kbd>F</kbd> fullscreen
+            <kbd>←</kbd> <kbd>→</kbd> {t("hud.navigate")} · <kbd>F</kbd>{" "}
+            {t("hud.fullscreen")}
           </span>
           <button
             className="toggle"
@@ -251,10 +239,16 @@ export const App: React.FC = () => {
             <span className="toggle-track">
               <i />
             </span>
-            Auto-advance
+            {t("hud.autoAdvance")}
           </button>
         </div>
       </footer>
     </div>
   );
 };
+
+export const App: React.FC = () => (
+  <I18nProvider>
+    <Deck />
+  </I18nProvider>
+);

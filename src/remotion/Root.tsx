@@ -26,6 +26,7 @@ export const RemotionRoot: React.FC = () => {
             fps={FRAMING_FPS}
             width={FRAMING_WIDTH}
             height={FRAMING_HEIGHT}
+            defaultProps={{ lang: "en" }}
           />
         );
       })}

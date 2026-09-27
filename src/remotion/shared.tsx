@@ -134,10 +134,11 @@ export const Words: React.FC<{
       }}
     >
       {words.map((word, i) => {
-        // Any word containing an asterisk is accented, and the markers are
+        // A word carrying a marker takes that style, and the markers are
         // stripped - so `*container*,` still reads as accent + punctuation.
         const accent = word.includes("*");
-        const clean = accent ? word.replace(/\*/g, "") : word;
+        const bold = !accent && word.includes("~");
+        const clean = word.replace(/[*~]/g, "");
         const p = spring({
           frame: Math.max(0, frame - delay - i * stagger),
           fps,
@@ -151,6 +152,7 @@ export const Words: React.FC<{
               opacity: p,
               transform: `translateY(${(1 - p) * 30}px)`,
               color: accent ? colors.amber300 : undefined,
+              fontWeight: bold ? 700 : undefined,
             }}
           >
             {clean}

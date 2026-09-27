@@ -1,10 +1,13 @@
 import React, { useMemo, useState } from "react";
+import { Rich, useI18n } from "../i18n";
 import { colors } from "../theme";
 import {
   COMPACTION,
   JAR_CAPACITY,
   JAR_COUNTS,
   JAR_ITEMS,
+  JAR_LABELS,
+  JAR_NOMINAL,
   itemQuota,
   type JarItem,
   type JarKind,
@@ -33,6 +36,8 @@ type Placement = {
 };
 
 export const Jar: React.FC = () => {
+  const { t } = useI18n();
+
   const [placements, setPlacements] = useState<Placement[]>([]);
   const [rejected, setRejected] = useState<string | null>(null);
 
@@ -69,7 +74,8 @@ export const Jar: React.FC = () => {
         uid: current.length + 1,
         itemId: item.id,
         kind: item.kind,
-        label: item.kind === "rock" ? item.name : "",
+        // Only rocks are tall enough to carry a label on the jar.
+        label: item.kind === "rock" ? t(item.nameKey) : "",
         cost,
       },
     ]);
@@ -84,31 +90,35 @@ export const Jar: React.FC = () => {
     if (placements.length === 0)
       return {
         tone: "warn" as const,
-        head: "Nothing in the jar yet",
-        body: "Start with whatever you would refuse to lose. Watch the price of the fine material change as you go.",
+        head: t("jar.verdict.empty.head"),
+        body: t("jar.verdict.empty.body"),
       };
     if (rocksIn === JAR_COUNTS.rock && leftOutside === 0)
       return {
         tone: "good" as const,
-        head: "Full jar, nothing left over",
-        body: "All three rocks, all five pebbles, all ten handfuls of sand - exactly 100 units. Same items, same jar: only the order changed.",
+        head: t("jar.verdict.perfect.head"),
+        body: t("jar.verdict.perfect.body", { capacity: JAR_CAPACITY }),
       };
     if (rocksIn === JAR_COUNTS.rock)
       return {
         tone: "warn" as const,
-        head: "The rocks fit. The detail didn't",
-        body: `${leftOutside} units are still on the bench. Every rock survived, but the pebbles and sand got crowded out because they arrived last.`,
+        head: t("jar.verdict.rocksOnly.head"),
+        body: t("jar.verdict.rocksOnly.body", { leftOut: leftOutside }),
       };
     return {
       tone: "bad" as const,
-      head: `${JAR_COUNTS.rock - rocksIn} rock${
-        JAR_COUNTS.rock - rocksIn === 1 ? "" : "s"
-      } left outside`,
-      body: `${
-        JAR_COUNTS.rock - rocksIn === 1 ? "A rock is" : "Rocks are"
-      } the thing you cannot replace. Fine material poured first pays full price and leaves no voids - so the big things have nowhere to sit.`,
+      head: t("jar.verdict.missing.head", {
+        n: JAR_COUNTS.rock - rocksIn,
+      }),
+      body: t("jar.verdict.missing.body"),
     };
-  }, [placements.length, rocksIn, leftOutside]);
+  }, [placements.length, rocksIn, leftOutside, t]);
+
+  const verdictColor = {
+    good: colors.good,
+    warn: colors.warn,
+    bad: colors.bad,
+  }[verdict.tone];
 
   return (
     <div className="puzzle-layout">
@@ -117,8 +127,8 @@ export const Jar: React.FC = () => {
         <div className="jar-layout">
           <div className="panel">
             <div className="panel-head">
-              <h3 className="panel-title">On the bench</h3>
-              <span className="panel-note">click to place</span>
+              <h3 className="panel-title">{t("jar.onBench")}</h3>
+              <span className="panel-note">{t("jar.clickToPlace")}</span>
             </div>
 
             <div className="tray">
@@ -127,6 +137,8 @@ export const Jar: React.FC = () => {
                 const remaining = itemQuota(item) - countOf(item.id);
                 const exhausted = remaining <= 0;
                 const blocked = cost > free;
+                // Stacks read as "Pebble", not "Pebble ×5".
+                const name = t(item.nameKey).split(" ×")[0];
 
                 return (
                   <div
@@ -134,28 +146,24 @@ export const Jar: React.FC = () => {
                     className="tray-item"
                     data-disabled={exhausted || blocked}
                     style={{ color: item.color }}
-                    title={item.blurb}
+                    title={t(item.blurbKey)}
                     onClick={() => !exhausted && !blocked && place(item)}
                   >
                     <span className="swatch" />
                     <span className="tray-label">
-                      <span className="tray-name">
-                        {item.kind === "rock"
-                          ? item.name
-                          : item.name.split(" ×")[0]}
-                      </span>
+                      <span className="tray-name">{name}</span>
                       <span className="tray-sub">
                         {exhausted
-                          ? "all used"
+                          ? t("jar.allUsed")
                           : blocked
-                            ? "no room left"
-                            : `${remaining} left · costs ${cost}`}
+                            ? t("jar.noRoom")
+                            : t("jar.remaining", { n: remaining, c: cost })}
                       </span>
                     </span>
                     <span className="tray-hours">
                       {item.kind === "rock"
-                        ? `${cost}`
-                        : `${cost} ea`}
+                        ? cost
+                        : t("jar.each", { c: cost })}
                     </span>
                   </div>
                 );
@@ -166,41 +174,47 @@ export const Jar: React.FC = () => {
               className="badge"
               data-on={hasRock}
               style={{ marginTop: 16 }}
-              title="Fine material settles into the voids rocks leave behind."
+              title={t("jar.badge.tip")}
             >
               <span className="badge-dot" />
               {hasRock
-                ? `Gap-fill active · pebble ×${COMPACTION.pebble} · sand ×${COMPACTION.sand}`
-                : "No rocks in the jar · full price"}
+                ? t("jar.badge.on", {
+                    pebble: COMPACTION.pebble,
+                    sand: COMPACTION.sand,
+                  })
+                : t("jar.badge.off")}
             </div>
           </div>
 
           <div className="jar-column">
             <div className="jar-lip" />
             <div className="jar">
-              {placements.map((p) => (
-                <div
-                  key={p.uid}
-                  className="layer"
-                  data-kind={p.kind}
-                  style={{ height: `${p.cost}%` }}
-                  title={`${p.kind} · ${p.cost} units`}
-                >
-                  {p.cost >= 8 ? (
-                    <span className="layer-text">{p.label || p.kind}</span>
-                  ) : null}
-                </div>
-              ))}
+              {placements.map((p) => {
+                const kindLabel = p.label || t(JAR_LABELS[p.kind]);
+                return (
+                  <div
+                    key={p.uid}
+                    className="layer"
+                    data-kind={p.kind}
+                    style={{ height: `${p.cost}%` }}
+                    title={`${kindLabel} · ${p.cost}`}
+                  >
+                    {p.cost >= 8 ? (
+                      <span className="layer-text">{kindLabel}</span>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
             <div className="jar-stats">
               <span>
-                filled <b>{used}</b>/{JAR_CAPACITY}
+                {t("jar.filled")} <b>{used}</b>/{JAR_CAPACITY}
               </span>
               <span>
-                free <b>{free}</b>
+                {t("jar.free")} <b>{free}</b>
               </span>
               <span>
-                rocks <b>{rocksIn}</b>/{JAR_COUNTS.rock}
+                {t("jar.rocks")} <b>{rocksIn}</b>/{JAR_COUNTS.rock}
               </span>
             </div>
           </div>
@@ -212,35 +226,29 @@ export const Jar: React.FC = () => {
                 style={{ height: `${Math.min(100, leftOutside)}%` }}
               />
               {leftOutside === 0 ? (
-                <div className="spill-empty-note">
-                  Everything is inside.
-                  <br />
-                  Nothing left on the bench.
-                </div>
+                <div className="spill-empty-note">{t("jar.spillEmpty")}</div>
               ) : null}
             </div>
             <div className="spill-amount">
-              {leftOutside === 0
-                ? "0 units left out"
-                : `${leftOutside} units left outside`}
+              {t("jar.leftOut", { n: leftOutside })}
             </div>
           </div>
         </div>
 
         <div className="panel">
           <div className="panel-head">
-            <h3 className="panel-title">Order you placed things</h3>
-            <span className="panel-note">{placements.length} placed</span>
+            <h3 className="panel-title">{t("jar.orderTitle")}</h3>
+            <span className="panel-note">
+              {t("jar.placed", { n: placements.length })}
+            </span>
           </div>
           <div className="order-strip">
             {placements.length === 0 ? (
-              <span className="order-empty">
-                your sequence will appear here — order is the whole game
-              </span>
+              <span className="order-empty">{t("jar.orderEmpty")}</span>
             ) : (
               placements.map((p) => (
                 <span key={p.uid} className="order-chip" data-kind={p.kind}>
-                  {p.kind} · {p.cost}
+                  {t(JAR_LABELS[p.kind])} · {p.cost}
                 </span>
               ))
             )}
@@ -251,51 +259,40 @@ export const Jar: React.FC = () => {
       {/* -------------------------------------------------- the brief -- */}
       <div className="puzzle-side">
         <div>
-          <p className="eyebrow">Puzzle 02</p>
+          <p className="eyebrow">{t("jar.puzzleLabel")}</p>
           <h2 className="section-title">
-            Big rocks, pebbles
-            <br />
-            and <em>sand</em>
+            {t("jar.titleA")} <em>{t("jar.titleB")}</em>
           </h2>
           <p className="lede">
-            3 rocks. 5 pebbles. 10 handfuls of sand. Nominal volume{" "}
-            <strong>120</strong> in a jar that holds <strong>100</strong>. It is
-            solvable — but only in one kind of order.
+            <Rich
+              text={t("jar.lede", {
+                nominal: JAR_NOMINAL,
+                capacity: JAR_CAPACITY,
+              })}
+            />
           </p>
         </div>
 
         <div className="panel">
           <div className="panel-head">
-            <h3 className="panel-title">How the pricing works</h3>
+            <h3 className="panel-title">{t("jar.pricingTitle")}</h3>
           </div>
           <ul className="rule-list">
             <li>
-              A <b>rock</b> costs its full 25 wherever it lands.
+              <Rich text={t("jar.pricing1")} />
             </li>
             <li>
-              <b>Pebbles and sand</b> are cheaper once rocks have made gaps for
-              them to settle into.
+              <Rich text={t("jar.pricing2")} />
             </li>
             <li>
-              Pour the fine material <b>first</b> and you pay full price for it —
-              and leave no voids behind for anything big.
+              <Rich text={t("jar.pricing3")} />
             </li>
           </ul>
         </div>
 
         <div className="verdict" data-tone={verdict.tone}>
           <div className="verdict-head">
-            <span
-              className="swatch"
-              style={{
-                color:
-                  verdict.tone === "good"
-                    ? colors.good
-                    : verdict.tone === "warn"
-                      ? colors.warn
-                      : colors.bad,
-              }}
-            />
+            <span className="swatch" style={{ color: verdictColor }} />
             {verdict.head}
           </div>
           <p>{verdict.body}</p>
@@ -303,47 +300,38 @@ export const Jar: React.FC = () => {
 
         {rejected ? (
           <div className="verdict" data-tone="bad">
-            <div className="verdict-head">Doesn't fit</div>
-            <p>
-              The jar is full. Whatever you want next, something already in there
-              has to leave.
-            </p>
+            <div className="verdict-head">{t("jar.reject.head")}</div>
+            <p>{t("jar.reject.body")}</p>
           </div>
         ) : null}
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button className="btn" onClick={reset}>
-            Empty the jar
+            {t("jar.reset")}
           </button>
           <button
             className="btn"
             data-variant="ghost"
             onClick={() => {
               reset();
-              // Pre-load the wrong order: sand first, then pebbles.
+              // Pre-load the wrong order: sand first, then pebbles, at full price.
               const sand = JAR_ITEMS.find((i) => i.id === "s1")!;
               const pebble = JAR_ITEMS.find((i) => i.id === "p1")!;
               const seeded: Placement[] = [];
-              for (let i = 0; i < JAR_COUNTS.sand; i += 1)
+              const push = (item: JarItem) =>
                 seeded.push({
                   uid: seeded.length + 1,
-                  itemId: sand.id,
-                  kind: "sand",
+                  itemId: item.id,
+                  kind: item.kind,
                   label: "",
-                  cost: sand.cost,
+                  cost: item.cost,
                 });
-              for (let i = 0; i < JAR_COUNTS.pebble; i += 1)
-                seeded.push({
-                  uid: seeded.length + 1,
-                  itemId: pebble.id,
-                  kind: "pebble",
-                  label: "",
-                  cost: pebble.cost,
-                });
+              for (let i = 0; i < JAR_COUNTS.sand; i += 1) push(sand);
+              for (let i = 0; i < JAR_COUNTS.pebble; i += 1) push(pebble);
               setPlacements(seeded);
             }}
           >
-            Show the classic mistake
+            {t("jar.seed")}
           </button>
         </div>
       </div>

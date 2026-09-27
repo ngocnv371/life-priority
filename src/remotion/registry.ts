@@ -1,13 +1,21 @@
 import type { FC } from "react";
+import type { Lang } from "../i18n";
 import { FRAMING_FPS, FRAMING_HEIGHT, FRAMING_WIDTH } from "./constants";
 import { DayDebriefScene, JarDebriefScene } from "./scenes/Debriefs";
 import { FramingScene, HorizonScene, RulesScene, TitleScene } from "./scenes/Lecture";
+
+/**
+ * Every scene is a pure function of the language, so the same composition can
+ * be rendered in English or Vietnamese - in the app, in Remotion Studio, or
+ * straight out to MP4.
+ */
+export type SceneProps = { lang: Lang };
 
 export type SceneDef = {
   /** Stable id, also used as the Remotion composition id. */
   id: string;
   title: string;
-  component: FC;
+  component: FC<SceneProps>;
   durationInFrames: number;
 };
 

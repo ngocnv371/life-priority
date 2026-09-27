@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { blockColors, colors } from "../theme";
+import { Rich, useI18n } from "../i18n";
+import { colors } from "../theme";
 import {
   CHOICE_BLOCKS,
   CHOICE_HOURS,
@@ -30,13 +31,15 @@ type DragState = {
 
 type Slot = {
   id: string;
-  name: string;
+  label: string;
   hours: number;
   color: string;
   kind: "locked" | "choice" | "feed";
 };
 
 export const DayBox: React.FC = () => {
+  const { t } = useI18n();
+
   const [placed, setPlaced] = useState<string[]>([]);
   const [drag, setDrag] = useState<DragState | null>(null);
   const [overBox, setOverBox] = useState(false);
@@ -70,7 +73,7 @@ export const DayBox: React.FC = () => {
     const list: Slot[] = [
       ...LOCKED_BLOCKS.map<Slot>((b) => ({
         id: b.id,
-        name: b.name,
+        label: t(b.nameKey),
         hours: b.hours,
         color: b.color,
         kind: "locked",
@@ -78,21 +81,29 @@ export const DayBox: React.FC = () => {
       ...placed.flatMap<Slot>((id) => {
         const b = CHOICE_BLOCKS.find((c) => c.id === id);
         return b
-          ? [{ id: b.id, name: b.name, hours: b.hours, color: b.color, kind: "choice" }]
+          ? [
+              {
+                id: b.id,
+                label: t(b.nameKey),
+                hours: b.hours,
+                color: b.color,
+                kind: "choice" as const,
+              },
+            ]
           : [];
       }),
     ];
     if (feedHours > 0) {
       list.push({
         id: "__feed",
-        name: "the feed",
+        label: t("day.feed"),
         hours: feedHours,
-        color: blockColors.feed,
+        color: colors.feed,
         kind: "feed",
       });
     }
     return list;
-  }, [placed, feedHours]);
+  }, [placed, feedHours, t]);
 
   /* ------------------------------------------------------------- drag -- */
 
@@ -101,7 +112,10 @@ export const DayBox: React.FC = () => {
     if (!r) return false;
     const pad = 30;
     return (
-      x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad
+      x >= r.left - pad &&
+      x <= r.right + pad &&
+      y >= r.top - pad &&
+      y <= r.bottom + pad
     );
   };
 
@@ -159,27 +173,33 @@ export const DayBox: React.FC = () => {
     if (feedHours === 0)
       return {
         tone: "good" as const,
-        head: "Nothing leaked",
-        body: `All ${CHOICE_HOURS} free hours were claimed by name. The day cost you exactly what you decided it would.`,
+        head: t("day.verdict.perfect.head"),
+        body: t("day.verdict.perfect.body", { hours: CHOICE_HOURS }),
       };
     if (feedHours <= 2)
       return {
         tone: "warn" as const,
-        head: `${feedHours}h went to the feed`,
-        body: `Recoverable. But notice which block didn't get placed - the feed took that block's space, not somebody else's.`,
+        head: t("day.verdict.small.head", { n: feedHours }),
+        body: t("day.verdict.small.body"),
       };
     if (feedHours <= 4)
       return {
         tone: "warn" as const,
-        head: `${feedHours}h went to the feed`,
-        body: `Over half of your discretionary day was never assigned to anything. It got spent anyway.`,
+        head: t("day.verdict.half.head", { n: feedHours }),
+        body: t("day.verdict.half.body"),
       };
     return {
       tone: "bad" as const,
-      head: `${feedHours}h went to the feed`,
-      body: `You had ${CHOICE_HOURS} free hours and kept almost none of them. Nothing was refused - it was simply never claimed.`,
+      head: t("day.verdict.lost.head", { n: feedHours }),
+      body: t("day.verdict.lost.body", { hours: CHOICE_HOURS }),
     };
-  }, [feedHours]);
+  }, [feedHours, t]);
+
+  const verdictColor = {
+    good: colors.good,
+    warn: colors.warn,
+    bad: colors.bad,
+  }[verdict.tone];
 
   return (
     <div className="puzzle-layout">
@@ -188,13 +208,14 @@ export const DayBox: React.FC = () => {
         <div className="daybox">
           <div className="panel">
             <div className="panel-head">
-              <h3 className="panel-title">Your blocks</h3>
-              <span className="panel-note">{remaining}h free</span>
+              <h3 className="panel-title">{t("day.yourBlocks")}</h3>
+              <span className="panel-note">{t("day.hFree", { n: remaining })}</span>
             </div>
             <div className="tray">
               {CHOICE_BLOCKS.map((b) => {
                 const blocked = isBlocked(b);
                 const isPlaced = placed.includes(b.id);
+                const name = t(b.nameKey);
                 return (
                   <div
                     key={b.id}
@@ -204,10 +225,10 @@ export const DayBox: React.FC = () => {
                     style={{ color: b.color }}
                     title={
                       isPlaced
-                        ? "Click to take it back out of the day"
+                        ? t("day.tipRemove")
                         : blocked
-                          ? "No room left in the day"
-                          : b.blurb
+                          ? t("day.tipBlocked")
+                          : t(b.blurbKey)
                     }
                     onPointerDown={(e) => beginDrag(e, b)}
                     onPointerMove={moveDrag}
@@ -219,9 +240,9 @@ export const DayBox: React.FC = () => {
                   >
                     <span className="swatch" />
                     <span className="tray-label">
-                      <span className="tray-name">{b.name}</span>
+                      <span className="tray-name">{name}</span>
                       <span className="tray-sub">
-                        {isPlaced ? "in the day — click to remove" : b.blurb}
+                        {isPlaced ? t("day.inDay") : t(b.blurbKey)}
                       </span>
                     </span>
                     <span className="tray-hours">{b.hours}h</span>
@@ -231,8 +252,8 @@ export const DayBox: React.FC = () => {
             </div>
 
             <div className="panel-head" style={{ marginTop: 18 }}>
-              <h3 className="panel-title">Already spent</h3>
-              <span className="panel-note">fixed</span>
+              <h3 className="panel-title">{t("day.alreadySpent")}</h3>
+              <span className="panel-note">{t("day.fixed")}</span>
             </div>
             <div className="tray">
               {LOCKED_BLOCKS.map((b) => (
@@ -241,12 +262,12 @@ export const DayBox: React.FC = () => {
                   className="tray-item"
                   data-disabled="true"
                   style={{ color: b.color }}
-                  title={b.blurb}
+                  title={t(b.blurbKey)}
                 >
                   <span className="swatch" />
                   <span className="tray-label">
-                    <span className="tray-name">{b.name}</span>
-                    <span className="tray-sub">not negotiable today</span>
+                    <span className="tray-name">{t(b.nameKey)}</span>
+                    <span className="tray-sub">{t("day.notNegotiable")}</span>
                   </span>
                   <span className="tray-hours">{b.hours}h</span>
                 </div>
@@ -281,17 +302,11 @@ export const DayBox: React.FC = () => {
                         flexGrow: s.hours,
                         background: s.kind === "feed" ? undefined : s.color,
                       }}
-                      title={
-                        s.kind === "choice"
-                          ? `Remove ${s.name}`
-                          : `${s.name} — ${s.hours}h`
-                      }
-                      onClick={() =>
-                        s.kind === "choice" && remove(s.id)
-                      }
+                      title={`${s.label} — ${s.hours}h`}
+                      onClick={() => s.kind === "choice" && remove(s.id)}
                     >
                       <span className="slot-label">
-                        {s.name} · {s.hours}h
+                        {s.label} · {s.hours}h
                       </span>
                     </div>
                   ))}
@@ -299,7 +314,7 @@ export const DayBox: React.FC = () => {
               </div>
             </div>
             <div className="box-caption">
-              {claimed}h of {DAY_TOTAL}h assigned
+              {t("day.assigned", { claimed })}
             </div>
           </div>
         </div>
@@ -313,7 +328,7 @@ export const DayBox: React.FC = () => {
             }}
           >
             <span className="swatch" style={{ color: drag.block.color }} />
-            <span className="tray-name">{drag.block.name}</span>
+            <span className="tray-name">{t(drag.block.nameKey)}</span>
             <span className="tray-hours">{drag.block.hours}h</span>
           </div>
         ) : null}
@@ -322,36 +337,34 @@ export const DayBox: React.FC = () => {
       {/* -------------------------------------------------- the brief -- */}
       <div className="puzzle-side">
         <div>
-          <p className="eyebrow">Puzzle 01</p>
+          <p className="eyebrow">{t("day.puzzleLabel")}</p>
           <h2 className="section-title">
-            The 24 hour <em>box</em>
+            {t("day.titleA")} <em>{t("day.titleB")}</em>
           </h2>
           <p className="lede">
-            Eighteen hours are already spent. The other{" "}
-            <strong>{CHOICE_HOURS}</strong> are genuinely yours — and four blocks
-            are competing for them. Drag a block into the day, or click it.
+            <Rich text={t("day.lede", { hours: CHOICE_HOURS })} />
           </p>
         </div>
 
         <div className="panel">
           <div className="panel-head">
-            <h3 className="panel-title">Where the day went</h3>
+            <h3 className="panel-title">{t("day.whereWent")}</h3>
           </div>
           <div className="meter">
             <Meter
-              name="Fixed"
+              name={t("day.meterFixed")}
               value={FIXED_HOURS}
               color={colors.amber600}
               total={DAY_TOTAL}
             />
             <Meter
-              name="Chosen"
+              name={t("day.meterChosen")}
               value={claimed - FIXED_HOURS}
               total={DAY_TOTAL}
               color={colors.amber300}
             />
             <Meter
-              name="Unclaimed"
+              name={t("day.meterUnclaimed")}
               value={feedHours}
               total={DAY_TOTAL}
               color={colors.feed}
@@ -361,10 +374,7 @@ export const DayBox: React.FC = () => {
 
         <div className="verdict" data-tone={verdict.tone}>
           <div className="verdict-head">
-            <span
-              className="swatch"
-              style={{ color: colors[verdict.tone === "good" ? "good" : verdict.tone === "warn" ? "warn" : "bad"] }}
-            />
+            <span className="swatch" style={{ color: verdictColor }} />
             {verdict.head}
           </div>
           <p>{verdict.body}</p>
@@ -372,16 +382,14 @@ export const DayBox: React.FC = () => {
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <button className="btn" onClick={() => setPlaced([])}>
-            Reset the day
+            {t("day.reset")}
           </button>
           <button
             className="btn"
             data-variant="ghost"
-            onClick={() =>
-              setPlaced(CHOICE_BLOCKS.slice(0, 1).map((b) => b.id))
-            }
+            onClick={() => setPlaced(CHOICE_BLOCKS.slice(0, 1).map((b) => b.id))}
           >
-            Show a leaky day
+            {t("day.leaky")}
           </button>
         </div>
       </div>

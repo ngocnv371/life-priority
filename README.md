@@ -53,6 +53,52 @@ through and hand control back automatically — useful for a hands-free run.
 
 ---
 
+## Languages (EN / VI)
+
+The **EN / VI** switch in the top bar swaps the entire deck: shell, puzzles *and*
+the Remotion scenes. The choice is remembered in `localStorage`, and a browser
+reporting `vi` gets Vietnamese on first visit. `<html lang>` is kept in sync.
+
+Switching language does **not** remount a running scene, so a video keeps its
+position while you switch.
+
+### How it is wired
+
+```
+src/i18n/en.ts     English strings - also the *shape* of the dictionary
+src/i18n/vi.ts     Vietnamese, typed as `Dict`  <- missing key = compile error
+src/i18n/index.tsx provider, useI18n(), useT(lang), <Rich>, {placeholder} filling
+```
+
+- **App components** call `useI18n()` and use `t("some.key", { n: 3 })`.
+- **Remotion scenes** take `lang` as a prop and call `useT(lang)`, so they render
+  identically in the app, in Remotion Studio, and exported to MP4. Compositions
+  declare `defaultProps={{ lang: "en" }}`; the app passes `inputProps={{ lang }}`.
+- `src/interactive/data.ts` holds **no display text** — only dictionary keys
+  (`nameKey`, `blurbKey`), so a missing translation cannot slip through.
+
+### Inline emphasis
+
+Both `<Rich>` (blocks of text) and `<Words>` (word-by-word reveals) understand the
+same two markers, which keep word order free for translators:
+
+| Marker | Renders as |
+| --- | --- |
+| `*text*` | accent — amber in the deck |
+| `~text~` | bold, inheriting the surrounding colour |
+
+So `"Nothing was ~decided~. It was *defaulted*."` renders as one translatable
+string rather than three concatenated fragments.
+
+### Adding a language
+
+1. Copy `src/i18n/en.ts`, translate the values, and type the result as `Dict`.
+2. Register it in `LANGS`, `LANG_LABELS`, `LANG_NAMES` and `dict` in `src/i18n/index.tsx`.
+
+TypeScript will list every key you have not translated.
+
+---
+
 ## How the two puzzles work
 
 These are not vibes — both have real arithmetic, which is why they land.
@@ -112,11 +158,12 @@ Almost everything you'd want to change is data, not layout.
 
 | Want to change | File |
 | --- | --- |
-| Day blocks, hours, blurbs | `src/interactive/data.ts` → `LOCKED_BLOCKS`, `CHOICE_BLOCKS` |
+| Any user-visible wording | `src/i18n/en.ts` and `src/i18n/vi.ts` |
+| Day block hours and colours | `src/interactive/data.ts` → `LOCKED_BLOCKS`, `CHOICE_BLOCKS` |
 | Jar items, capacities, compaction | `src/interactive/data.ts` → `JAR_ITEMS`, `JAR_CAPACITY`, `COMPACTION` |
 | Palette, springs, fonts | `src/theme.ts` |
-| Scene copy and timing | `src/remotion/scenes/*.tsx` |
-| Section order, captions, nav | `src/App.tsx` → `SECTIONS` |
+| Scene timing and non-text layout | `src/remotion/scenes/*.tsx` |
+| Section order, nav, language switch | `src/App.tsx` → `SECTIONS`, `Deck` |
 | Scene durations (single source of truth) | `src/remotion/registry.ts` → `SCENES` |
 
 `SCENES` drives both the Remotion compositions and the app's `<Player>` embeds,
@@ -148,6 +195,12 @@ npm run render -- Horizon out/horizon.mp4
 Use this if a venue machine struggles with live rendering, or to share a single
 segment. Composition ids match the scene ids in `registry.ts`.
 
+To export the Vietnamese cut, pass props through the CLI:
+
+```bash
+npx remotion render src/remotion/index.ts Horizon out/horizon-vi.mp4 --props='{"lang":"vi"}'
+```
+
 ---
 
 ## Known noise
@@ -168,6 +221,7 @@ project is moved to React 19.
 ## Accessibility / fallbacks
 
 - **Keyboard:** arrow keys, Home/End, **F** for fullscreen.
+- **Bilingual:** EN / VI, persisted, with `<html lang>` kept in sync.
 - **Click-to-place everywhere:** both puzzles are fully playable without
   dragging, which also makes them work with a presenter clicker.
 - **`prefers-reduced-motion`** disables the decorative CSS animation in the app

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { Player, type PlayerRef } from "@remotion/player";
+import { Rich, type Lang } from "../i18n";
 import {
   FRAMING_FPS,
   FRAMING_HEIGHT,
@@ -17,10 +18,11 @@ import { sceneById } from "../remotion/registry";
 
 export const VideoSection: React.FC<{
   sceneId: string;
-  caption: React.ReactNode;
+  lang: Lang;
+  caption: string;
   autoAdvance: boolean;
   onFinished: () => void;
-}> = ({ sceneId, caption, autoAdvance, onFinished }) => {
+}> = ({ sceneId, lang, caption, autoAdvance, onFinished }) => {
   const scene = sceneById(sceneId);
   const player = useRef<PlayerRef>(null);
 
@@ -52,6 +54,7 @@ export const VideoSection: React.FC<{
         <Player
           ref={player}
           component={scene.component}
+          inputProps={{ lang }}
           durationInFrames={scene.durationInFrames}
           fps={FRAMING_FPS}
           compositionWidth={FRAMING_WIDTH}
@@ -63,7 +66,9 @@ export const VideoSection: React.FC<{
           style={{ width: "100%", height: "100%" }}
         />
       </div>
-      <p className="video-caption">{caption}</p>
+      <p className="video-caption">
+        <Rich text={caption} accentStyle={{ color: "var(--amber-200)" }} />
+      </p>
     </div>
   );
 };
